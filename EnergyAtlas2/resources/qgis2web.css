@@ -13,13 +13,7 @@ th, td {
 
 #map {
     width: 100%;
-    height: calc(100% - 134px);
-	border-top-style: solid;
-	border-top-color: black;
-	border-width: 1px;
-	position: relative;
-	float: left;
-	
+    height: 100%;
 }
 
 .ol-popup {
@@ -36,7 +30,7 @@ th, td {
     left: -50px;   
     height: auto;
     width: auto;
-    min-width: 200px;
+    min-width: 100px;
     max-height:400px;  
     overflow: auto;      
 }
@@ -72,8 +66,7 @@ th, td {
     margin-bottom:0.25em;
 }
 
-
-a.one:link {
+a:link {
 	color: #E8702A;
 	font-size: 24px;
 	font-weight:100;
@@ -82,7 +75,7 @@ a.one:link {
 	text-decoration:none;
 }
 
-a.one:visited {
+a:visited {
 	color: #E8702A;
 	font-size: 24px;
 	font-weight:100;
@@ -93,24 +86,15 @@ a.one:visited {
 	
 }
 
-a.one:hover {color: #ffffff;
+a:hover {color: #ffffff;
 	font-size: 24px;
 	font-weight:100;
 	font-style:normal;
 	font-family:"Gill Sans", "Gill Sans MT", "Myriad Pro", "DejaVu Sans Condensed", Helvetica, Arial, sans-serif;
 	text-decoration:none;
 }
+
 
 h1 {
 	letter-spacing: 6px;
-	text-align: center;
-}
-
-title {
-	height: auto;
-}
-
-h2 {
-	text-align: center;
-	
 }

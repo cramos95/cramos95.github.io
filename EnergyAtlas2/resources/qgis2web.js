@@ -35,7 +35,7 @@ layerSwitcher.hidePanel = function() {};
 layerSwitcher.showPanel();
 
 
-map.getView().fit([-12052424.818300, 2952182.093109, -9493563.165327, 4342925.007432], map.getSize());
+map.getView().fit([-11789459.329551, 2652268.411164, -9421515.321143, 4669286.023139], map.getSize());
 
 var NO_POPUP = 0
 var ALL_FIELDS = 1
@@ -349,6 +349,14 @@ map.on('singleclick', function(evt) {
 
 
 
+var geocoder = new Geocoder('nominatim', {
+  provider: 'osm',
+  lang: 'en-US',
+  placeholder: 'Search for ...',
+  limit: 5,
+  keepOpen: true
+});
+map.addControl(geocoder);
 
 var attribution = document.getElementsByClassName('ol-attribution')[0];
 var attributionList = attribution.getElementsByTagName('ul')[0];
