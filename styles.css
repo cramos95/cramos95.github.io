@@ -205,6 +205,38 @@ b:active {
 }
 
 
+#container {
+	position: relative;
+	text-align: center;
+	width: 100%;
+}
+
+#child {
+	position: absolute;
+	text-align: center;
+	width: 100%;
+	
+
+	
+}
+
+#child2 {
+	position: relative;
+	text-align: justify;
+	right: 50px;
+	top: 100px;
+	
+	float: right;
+	width: 40%;
+	background-color: rgba(0,0,0,0.5);
+	padding-right: 20px;
+	padding-left: 20px;
+	border-radius: 25px;
+	
+	
+}
+
+
 
 
 
