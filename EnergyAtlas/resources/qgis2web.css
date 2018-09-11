@@ -12,10 +12,12 @@ th, td {
 }
 
 #map {
-    width: 100%;
-    height: calc(100% - 134px);
-	border-top-style: solid;
+    width: 58%;
+    height: 100%;
+	border-top-style: none;
 	border-top-color: black;
+	border-right-style: solid;
+	border-right-color: black;
 	border-width: 1px;
 	position: relative;
 	float: left;
@@ -106,11 +108,55 @@ h1 {
 	text-align: center;
 }
 
-title {
+#title {
 	height: auto;
+	border-bottom-style: solid;
+	border-bottom-color: black;
+	border-bottom-width: 1px;
+}
+
+#container {
+	position: abolute;
+	height: calc(100% - 134px);
+}
+
+#text {
+	position: relative;
+	float: right;
+	width: 38%;
+	border-top-style: none;
+	border-top-color: black;
+	border-width: 1px;
+	padding-right: 2%;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	height: 100%;
+	display: inline-block;
+}
+
+#imgcontainer{
+	position: absolute;
+	width: 100%;
+	
+	
+}
+
+img {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	
 }
 
 h2 {
 	text-align: center;
 	
+	
+}
+
+p {
+	font-family: "Georgia, serif";
+	font-size: large;
+	line-height: 1.2;
+	padding-right: 20px;
 }
