@@ -140,7 +140,8 @@ a:visited {
 	
 }
 
-a:hover {color: #000000;
+a:hover {
+	color: #2ecc71;
 	font-size: 18px;
 	font-weight:100;
 	font-style:normal;

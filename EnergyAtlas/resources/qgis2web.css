@@ -76,27 +76,29 @@ th, td {
 
 
 a.one:link {
-	color: #E8702A;
-	font-size: 24px;
+	color: #ffffff; /*E8702A*/
+	font-size: 18px;
 	font-weight:100;
 	font-style:normal;
 	font-family:"Gill Sans", "Gill Sans MT", "Myriad Pro", "DejaVu Sans Condensed", Helvetica, Arial, sans-serif;
 	text-decoration:none;
+
 }
 
 a.one:visited {
-	color: #E8702A;
-	font-size: 24px;
+	color: #ffffff; /*E8702A*/
+	font-size: 18px;
 	font-weight:100;
 	font-style:normal;
 	font-family:"Gill Sans", "Gill Sans MT", "Myriad Pro", "DejaVu Sans Condensed", Helvetica, Arial, sans-serif;
 	text-decoration:none;
 	
 	
+	
 }
 
-a.one:hover {color: #ffffff;
-	font-size: 24px;
+a.one:hover {color: #2ecc71;
+	font-size: 18px;
 	font-weight:100;
 	font-style:normal;
 	font-family:"Gill Sans", "Gill Sans MT", "Myriad Pro", "DejaVu Sans Condensed", Helvetica, Arial, sans-serif;
