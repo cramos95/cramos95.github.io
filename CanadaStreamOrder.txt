@@ -1,0 +1,142 @@
+
+DROP TABLE IF EXISTS streamorder;
+CREATE TEMPORARY TABLE streamorder as (
+SELECT * FROM canwater_streamorder
+);
+
+ALTER TABLE streamorder
+ADD COLUMN fromjnc text;
+ALTER TABLE streamorder
+ADD COLUMN tojnc text;
+UPDATE streamorder
+SET fromjnc = ((st_x(st_pointn(streamorder.geom,1)))::text)||((st_y(st_pointn(streamorder.geom,1)))::text);
+UPDATE streamorder
+SET tojnc = ((st_x(st_pointn(streamorder.geom,-1)))::text)||((st_y(st_pointn(streamorder.geom,-1)))::text);
+-----------------------------------------------------
+
+DROP TABLE IF EXISTS sotest_lp2;
+CREATE TEMPORARY TABLE sotest_lp2 as (
+SELECT * FROM streamorder WHERE priority = 2);
+
+DROP TABLE IF EXISTS sotest_lp1;
+CREATE TEMPORARY TABLE sotest_lp1 as (
+SELECT * FROM streamorder WHERE priority = 1);
+
+-----------------------------------------------------
+
+ALTER TABLE sotest_lp1
+ADD COLUMN streamorde int;
+UPDATE sotest_lp1
+SET streamorde = CASE WHEN fromjnc::text NOT IN (SELECT UNNEST(ARRAY_AGG(sotest_lp1.tojnc))FROM sotest_lp1) THEN 1
+						ELSE 0 
+						END
+;
+ALTER TABLE sotest_lp1
+ADD COLUMN upstreamso int[];
+
+ALTER TABLE sotest_lp1
+ADD COLUMN arraylength int;
+
+ALTER TABLE sotest_lp1
+ADD COLUMN upstreamax int;
+
+create index on sotest_lp1 (streamorde, upstreamso)
+
+-----------------------------------------------------
+--Step 4 First part of loop
+
+DO
+$do$
+DECLARE
+   _counter int := 10;
+BEGIN
+   WHILE _counter > 0
+   LOOP
+
+--upstreamso
+CREATE TEMPORARY TABLE temp1 as(
+SELECT x.id, ARRAY_AGG(b.streamorde) as upstreamso
+FROM sotest_lp1 as x, sotest_lp1 as b
+WHERE x.fromjnc = b.tojnc
+GROUP BY x.id
+);
+
+UPDATE sotest_lp1
+SET upstreamso = temp1.upstreamso
+FROM temp1
+WHERE sotest_lp1.id = temp1.id;
+
+DROP TABLE IF EXISTS temp1;
+
+--arrayLength
+CREATE TEMPORARY TABLE temp1 AS (
+SELECT sotest_lp1.id, array_length(upstreamso,1) as arraylength
+FROM sotest_lp1);
+
+UPDATE sotest_lp1
+SET arraylength = temp1.arraylength
+FROM temp1
+WHERE sotest_lp1.id = temp1.id;
+
+DROP TABLE IF EXISTS temp1;
+
+--upstream max
+CREATE TEMPORARY TABLE temp1 as (
+WITH foo AS (
+		SELECT sotest_lp1.id, UNNEST(upstreamso) as soso
+		FROM sotest_lp1)
+SELECT foo.id, max(foo.soso) as somax
+FROM foo, sotest_lp1
+WHERE foo.id = sotest_lp1.id
+GROUP BY sotest_lp1.id, foo.id
+);
+
+UPDATE sotest_lp1
+SET upstreamax = temp1.somax
+FROM temp1
+WHERE sotest_lp1.id = temp1.id;
+
+DROP TABLE IF EXISTS temp1;
+
+
+
+-----------------------------------------------------
+--Second Part of Loop
+
+UPDATE sotest_lp1
+SET streamorde = 
+CASE WHEN streamorde = 0 AND NOT (0 = ANY (upstreamso))
+				THEN ( CASE WHEN arraylength = 1 THEN upstreamso[1]
+					  		WHEN arraylength = 2 AND upstreamso[1] = upstreamso[2] THEN (upstreamso[1]+1)
+					  		WHEN arraylength = 2 AND upstreamso[1] != upstreamso[2] THEN upstreamax
+					  		WHEN arraylength = 3 AND ( (upstreamso[1] = upstreamso[2] AND upstreamso[1] = upstreamax) OR (upstreamso[1] = upstreamso[3] AND upstreamso[1] = upstreamax) OR (upstreamso[2] = upstreamso[3] AND upstreamso[2] = upstreamax)) THEN (upstreamso[1]+1)
+					 		WHEN arraylength = 3 AND NOT ( (upstreamso[1] = upstreamso[2] AND upstreamso[1] = upstreamax) OR (upstreamso[1] = upstreamso[3] AND upstreamso[1] = upstreamax) OR (upstreamso[2] = upstreamso[3] AND upstreamso[2] = upstreamax)) THEN upstreamax
+					 		ELSE streamorde
+					  	END)
+		ELSE streamorde
+		END
+		;
+		
+SELECT COUNT(*) into _counter FROM sotest_lp1 WHERE streamorde = 0;
+     
+      RAISE NOTICE 'The counter is %', _counter;  
+   END LOOP;
+END
+$do$
+					 
+					 
+CREATE TABLE output as (
+SELECT * FROM sotest_lp1
+UNION
+SELECT *, "0" as streamorde
+FROM sotest_lp2
+);
+
+
+
+
+
+
+
+
+

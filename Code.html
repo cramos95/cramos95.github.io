@@ -17,188 +17,189 @@
     </tr>
     <tr>
       <td width="10%" bgcolor="#253494"></td><!--#91bbe4-->
-      <td align="center" width="80%" bgcolor="#253494"><h1>Python Code Sample</h1><!--#91bbe4-->
-        <subtitle>This code calculates geomorphic characteristics of watershed basins using ArcMAP and creates a csv:</subtitle>   
-        <h3><a href="CodeOutput.csv">SampleOutput</a> | <a href="GeoProgrammingReport.pdf">Complete Report</a></h3> 
+      <td align="center" width="80%" bgcolor="#253494"><h1>Code Samples</h1><!--#91bbe4-->
+        <subtitle>This code calculates geomorphic characteristics of watershed basins using ArcPy and creates a csv:</subtitle>   
+        <h3><a href="CodeOutput.csv">SampleOutput</a> | <a href="GeoProgrammingReport.pdf">Complete Report</a> | <a href="geomorphicCharacteristics.txt">Code</a></h3> 
+		<subtitle>This code calculates Strahler stream order on Canada's NHN water network data with a script using PostreSQL and PostGIS</subtitle>
+		<h3><a href="CodeOutput.csv">SampleOutput-Coming Soon!</a> | <a href="GeoProgrammingReport.pdf">Write up - Coming Soon!</a> | <a href="CanadaStreamOrder.txt">Code</a></h3>
       </td>
-      <td width="10%" bgcolor="#253494">&nbsp;</td><!--#91bbe4-->
     </tr>
     <tr>
       <td width="10%" bgcolor="#253494">&nbsp;</td><!--#91bbe4-->
-      <td height ="auto" bgcolor="#3C3C3C"><code><!--#91bbe4-->
-<pre>
-import arcpy
-import math
-import csv
-path = ('D:\\3Geoprogramming\\WatershedAnalysis\\PythonTest1')
-arcpy.env.workspace = path
-arcpy.env.overwriteOutput = True
+      <!-- <td height ="auto" bgcolor="#3C3C3C"><code><!--#91bbe4--> -->
+<!-- <pre> -->
+<!-- import arcpy -->
+<!-- import math -->
+<!-- import csv -->
+<!-- path = ('D:\\3Geoprogramming\\WatershedAnalysis\\PythonTest1') -->
+<!-- arcpy.env.workspace = path -->
+<!-- arcpy.env.overwriteOutput = True -->
 
 
 
-#Files
-##User must specify projected boundary file, projected streams file, projected dem, 
-##and boundary PROJECTION FILE.
-wbd=(path+"\\WatershedPrj.shp")
-streams=(path+"\\StreamPrj.shp")
-dem = (path+"\\dem_prj")
-##note, mbg is not yet created, but it will be in step 3
-mbg = (path+"\\mbg.shp")
-csvOutput = "D:\\3Geoprogramming\\WatershedAnalysis\\PythonTest1\\pythontest1.csv"
-
-
-
-
-
-
-#get linear unit
-##my code should work for any linear unit that contains eter, oot, or eet, for 
-##M/meter(s), F/foot or F/feet
-sr = arcpy.Describe(wbd).spatialReference
-unit = sr.linearUnitName
-
-#create files
-##In Python 2, open outfile with mode 'wb' instead of 'w'. The csv.writer writes \r\n into
-##the file directly. If you don't open the file in binary mode, it will write \r\r\n because on Windows
-##text mode will translate each \n into \r\n.
-csvFile = open (csvOutput,"wb")
-wr=csv.writer(csvFile,delimiter=',')
-wr.writerow(["Name", "HUCid", "LinearUnitName", "areaProjectedUnits", "areaSqKM","areaAcres", 
-/"elongation", "orientation", "longAxis","relief", "reliefRatio","shapeIndex", "drainageDensity",
-/"ruggednessNumber"])
-
-#create empty list to store metrics
-metrics = []
-
-
-
-
-
-#METRICS------------------------------------------------------------------------
-
-
-# 1 Name and HUC ID
-## user can select any wbd file, which include HUC2 through HUC12 basins, therefore must account 
-##for variability in field names that match the HUC# of the basin. Do so by using wildcard to 
-## get HUC* field into a variable, and pass variable to search cursor. Note
-## that search cursor does not accept wildcard as input for field.
-for item in arcpy.ListFields(wbd,"HUC*"):
-    huc = str(item.name)
-with arcpy.da.SearchCursor(wbd,["Name", huc]) as cur1:
-    for row in cur1:
-        name = row[0]
-        hucid = row[1]
-metrics.append(name)
-metrics.append(hucid)
-del row
-
-
-#Add Linear Unit name to list between name/Huc and area
-metrics.append(str(unit))
-
-
-# 2 Area in projected units, AreaSqKm, AreaAcres. Note that AreaSqKm and AreaAcres are field 
-# names specific to USGS NHD files.
-with arcpy.da.SearchCursor(wbd, ["SHAPE@AREA", "AreaSqKm", "AreaAcres"]) as cur2:
-    for row in cur2:
-        areaProj = row[0]
-        areaSqKm = str(row[1])
-        areaAcres = str(row[2])
-##Note, do not convert areaProj to str in loop, need it as float for later calculations.
-metrics.append(str(areaProj))
-metrics.append(areaSqKm)
-metrics.append(areaAcres)
-del row
-
-
-# 3 Elongation and Orientation
-arcpy.MinimumBoundingGeometry_management(wbd,"mbg.shp","CONVEX_HULL","","", "MBG_FIELDS")
-with arcpy.da.SearchCursor(mbg, ["MBG_Length", "MBG_Orient"]) as cur3:
-    for row in cur3:
-        longAxis = row[0]
-        orientation = str(row[1])
-elongation = ((2*(math.sqrt(areaProj/3.14159265)))/longAxis)
-metrics.append(str(elongation))
-metrics.append(orientation)
-metrics.append(str(longAxis))
-del row
-
-
-# 4 Relief ratio and relief(not reported but used later in ruggedness number
-## DEM from USGS will always be feet, therefore if DataFrameUnits(because of user chosen projection = feet,
-## dont multiply by .3048, if  unit = meters, keep the multiplicaiton conversion.
-## confirmed works with Meter projection 4/3 1:30PM
-maxResult = arcpy.GetRasterProperties_management(dem, "MAXIMUM")
-minResult = arcpy.GetRasterProperties_management(dem, "MINIMUM")
-maxElev = float(maxResult.getOutput(0))
-minElev = float(minResult.getOutput(0))
-if "eter" in unit:
-    relief = (maxElev - minElev)*0.3048
-elif "eet" or "oot" in unit:
-    relief = (maxElev - minElev)
-## relief ratio is usually reported as (elev units/river units) so meters/km or ft/mile, must accomadate for this
-##otherwise the relief ratio is too small. need another if statement here, if feet, long axis/5280, if meters,
-## long axis/1000
-reliefRatio = relief/longAxis
-if "eter" in unit:
-    rRcorrected = relief/(longAxis/1000)
-elif "eet" or "oot" in unit:
-    rRcorrected = relief/(longAxis/5280)
-metrics.append(str(relief))
-metrics.append(str(rRcorrected))
-
-
-# 5 Shape index
-shapeIndex = (longAxis**2)/areaProj
-metrics.append(str(shapeIndex))
-
-
-# 6 Drainage Density and Stremlength(not reported)
-## drainage density must be reported as km/km^2 or mi/mi^2, NOT as m/m^2 or ft/ft^2
-## therefore again must decide between meters and feet, if use shape token to get
-## dataframe units for stream length and projected area, can use if statement again
-## if dataframe units = meters, DD*1000, if units = feet, DD*5280
-## confirmed works 4/3 1:38pm
-streamLen = 0
-with arcpy.da.SearchCursor(streams, "SHAPE@LENGTH") as cur4:
-    for row in cur4:
-        streamLen += row[0]
-drainDenRaw = streamLen/areaProj
-#drainDen = drainDenRaw*1000
-if "eter" in unit:
-    drainDen = drainDenRaw*1000
-elif "eet" or "oot" in unit:
-    drainDen = drainDenRaw*5280
-metrics.append(str(drainDen))
-del row
-
-
-# 7 Ruggedness number
-ruggedNum = relief*drainDen
-metrics.append(str(ruggedNum))
-
-#-------------------------------------------------------------------------------
+<!-- #Files -->
+<!-- ##User must specify projected boundary file, projected streams file, projected dem,  -->
+<!-- ##and boundary PROJECTION FILE. -->
+<!-- wbd=(path+"\\WatershedPrj.shp") -->
+<!-- streams=(path+"\\StreamPrj.shp") -->
+<!-- dem = (path+"\\dem_prj") -->
+<!-- ##note, mbg is not yet created, but it will be in step 3 -->
+<!-- mbg = (path+"\\mbg.shp") -->
+<!-- csvOutput = "D:\\3Geoprogramming\\WatershedAnalysis\\PythonTest1\\pythontest1.csv" -->
 
 
 
 
 
 
+<!-- #get linear unit -->
+<!-- ##my code should work for any linear unit that contains eter, oot, or eet, for  -->
+<!-- ##M/meter(s), F/foot or F/feet -->
+<!-- sr = arcpy.Describe(wbd).spatialReference -->
+<!-- unit = sr.linearUnitName -->
+
+<!-- #create files -->
+<!-- ##In Python 2, open outfile with mode 'wb' instead of 'w'. The csv.writer writes \r\n into -->
+<!-- ##the file directly. If you don't open the file in binary mode, it will write \r\r\n because on Windows -->
+<!-- ##text mode will translate each \n into \r\n. -->
+<!-- csvFile = open (csvOutput,"wb") -->
+<!-- wr=csv.writer(csvFile,delimiter=',') -->
+<!-- wr.writerow(["Name", "HUCid", "LinearUnitName", "areaProjectedUnits", "areaSqKM","areaAcres",  -->
+<!-- /"elongation", "orientation", "longAxis","relief", "reliefRatio","shapeIndex", "drainageDensity", -->
+<!-- /"ruggednessNumber"]) -->
+
+<!-- #create empty list to store metrics -->
+<!-- metrics = [] -->
 
 
 
-#write to csv and close file
-wr.writerows([metrics])
-csvFile.close()
-
-del cur1, cur2, cur3, cur4, path, streams, mbg, wbd, csvOutput, unit
-del metrics, huc, item, areaProj, areaSqKm, areaAcres, longAxis, orientation
-del elongation, maxResult, minResult, maxElev, minElev, reliefRatio, rRcorrected
-del relief, shapeIndex, streamLen, drainDen, drainDenRaw, ruggedNum
 
 
-</pre>
-</code></td>
+<!-- #METRICS------------------------------------------------------------------------ -->
+
+
+<!-- # 1 Name and HUC ID -->
+<!-- ## user can select any wbd file, which include HUC2 through HUC12 basins, therefore must account  -->
+<!-- ##for variability in field names that match the HUC# of the basin. Do so by using wildcard to  -->
+<!-- ## get HUC* field into a variable, and pass variable to search cursor. Note -->
+<!-- ## that search cursor does not accept wildcard as input for field. -->
+<!-- for item in arcpy.ListFields(wbd,"HUC*"): -->
+    <!-- huc = str(item.name) -->
+<!-- with arcpy.da.SearchCursor(wbd,["Name", huc]) as cur1: -->
+    <!-- for row in cur1: -->
+        <!-- name = row[0] -->
+        <!-- hucid = row[1] -->
+<!-- metrics.append(name) -->
+<!-- metrics.append(hucid) -->
+<!-- del row -->
+
+
+<!-- #Add Linear Unit name to list between name/Huc and area -->
+<!-- metrics.append(str(unit)) -->
+
+
+<!-- # 2 Area in projected units, AreaSqKm, AreaAcres. Note that AreaSqKm and AreaAcres are field  -->
+<!-- # names specific to USGS NHD files. -->
+<!-- with arcpy.da.SearchCursor(wbd, ["SHAPE@AREA", "AreaSqKm", "AreaAcres"]) as cur2: -->
+    <!-- for row in cur2: -->
+        <!-- areaProj = row[0] -->
+        <!-- areaSqKm = str(row[1]) -->
+        <!-- areaAcres = str(row[2]) -->
+<!-- ##Note, do not convert areaProj to str in loop, need it as float for later calculations. -->
+<!-- metrics.append(str(areaProj)) -->
+<!-- metrics.append(areaSqKm) -->
+<!-- metrics.append(areaAcres) -->
+<!-- del row -->
+
+
+<!-- # 3 Elongation and Orientation -->
+<!-- arcpy.MinimumBoundingGeometry_management(wbd,"mbg.shp","CONVEX_HULL","","", "MBG_FIELDS") -->
+<!-- with arcpy.da.SearchCursor(mbg, ["MBG_Length", "MBG_Orient"]) as cur3: -->
+    <!-- for row in cur3: -->
+        <!-- longAxis = row[0] -->
+        <!-- orientation = str(row[1]) -->
+<!-- elongation = ((2*(math.sqrt(areaProj/3.14159265)))/longAxis) -->
+<!-- metrics.append(str(elongation)) -->
+<!-- metrics.append(orientation) -->
+<!-- metrics.append(str(longAxis)) -->
+<!-- del row -->
+
+
+<!-- # 4 Relief ratio and relief(not reported but used later in ruggedness number -->
+<!-- ## DEM from USGS will always be feet, therefore if DataFrameUnits(because of user chosen projection = feet, -->
+<!-- ## dont multiply by .3048, if  unit = meters, keep the multiplicaiton conversion. -->
+<!-- ## confirmed works with Meter projection 4/3 1:30PM -->
+<!-- maxResult = arcpy.GetRasterProperties_management(dem, "MAXIMUM") -->
+<!-- minResult = arcpy.GetRasterProperties_management(dem, "MINIMUM") -->
+<!-- maxElev = float(maxResult.getOutput(0)) -->
+<!-- minElev = float(minResult.getOutput(0)) -->
+<!-- if "eter" in unit: -->
+    <!-- relief = (maxElev - minElev)*0.3048 -->
+<!-- elif "eet" or "oot" in unit: -->
+    <!-- relief = (maxElev - minElev) -->
+<!-- ## relief ratio is usually reported as (elev units/river units) so meters/km or ft/mile, must accomadate for this -->
+<!-- ##otherwise the relief ratio is too small. need another if statement here, if feet, long axis/5280, if meters, -->
+<!-- ## long axis/1000 -->
+<!-- reliefRatio = relief/longAxis -->
+<!-- if "eter" in unit: -->
+    <!-- rRcorrected = relief/(longAxis/1000) -->
+<!-- elif "eet" or "oot" in unit: -->
+    <!-- rRcorrected = relief/(longAxis/5280) -->
+<!-- metrics.append(str(relief)) -->
+<!-- metrics.append(str(rRcorrected)) -->
+
+
+<!-- # 5 Shape index -->
+<!-- shapeIndex = (longAxis**2)/areaProj -->
+<!-- metrics.append(str(shapeIndex)) -->
+
+
+<!-- # 6 Drainage Density and Stremlength(not reported) -->
+<!-- ## drainage density must be reported as km/km^2 or mi/mi^2, NOT as m/m^2 or ft/ft^2 -->
+<!-- ## therefore again must decide between meters and feet, if use shape token to get -->
+<!-- ## dataframe units for stream length and projected area, can use if statement again -->
+<!-- ## if dataframe units = meters, DD*1000, if units = feet, DD*5280 -->
+<!-- ## confirmed works 4/3 1:38pm -->
+<!-- streamLen = 0 -->
+<!-- with arcpy.da.SearchCursor(streams, "SHAPE@LENGTH") as cur4: -->
+    <!-- for row in cur4: -->
+        <!-- streamLen += row[0] -->
+<!-- drainDenRaw = streamLen/areaProj -->
+<!-- #drainDen = drainDenRaw*1000 -->
+<!-- if "eter" in unit: -->
+    <!-- drainDen = drainDenRaw*1000 -->
+<!-- elif "eet" or "oot" in unit: -->
+    <!-- drainDen = drainDenRaw*5280 -->
+<!-- metrics.append(str(drainDen)) -->
+<!-- del row -->
+
+
+<!-- # 7 Ruggedness number -->
+<!-- ruggedNum = relief*drainDen -->
+<!-- metrics.append(str(ruggedNum)) -->
+
+<!-- #------------------------------------------------------------------------------- -->
+
+
+
+
+
+
+
+
+
+<!-- #write to csv and close file -->
+<!-- wr.writerows([metrics]) -->
+<!-- csvFile.close() -->
+
+<!-- del cur1, cur2, cur3, cur4, path, streams, mbg, wbd, csvOutput, unit -->
+<!-- del metrics, huc, item, areaProj, areaSqKm, areaAcres, longAxis, orientation -->
+<!-- del elongation, maxResult, minResult, maxElev, minElev, reliefRatio, rRcorrected -->
+<!-- del relief, shapeIndex, streamLen, drainDen, drainDenRaw, ruggedNum -->
+
+
+<!-- </pre> -->
+<!-- </code></td> -->
       <td  width="10%" bgcolor="#253494">&nbsp;</td><!--#91bbe4-->
     </tr>
     <tr>
